@@ -17,7 +17,7 @@ library(dplyr)
 library(tsibble)
 
 # Load data
-sp500_data <- read_csv("/Users/gabrielmancillas/Desktop/ADS-506/Mod 01/Assignment 1.2/archive (12)/sp500_stocks.csv")
+sp500_data <- read_csv("/Users/gabrielmancillas/Desktop/ADS-506/Mod 01/Assignment 1.2/data/sp500_stocks.csv")
 
 # Show data
 head(sp500_data)
