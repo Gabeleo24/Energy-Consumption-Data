@@ -1,0 +1,46 @@
+---
+title: "ADS506 Assignment 1.2 sp500_stocks"
+author: "Gabriel E. Mancillas Gallardo"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+**Assignment: Propose a Time Series Dataset for Your Final Project**
+### Data Source
+
+The data source is the S&P 500 stock data from Kaggle. The dataset contains the stock prices of the S&P 500 companies from 2013 to 2018. The dataset contains the following columns:
+
+```{r warning=FALSE, message=FALSE}
+#library(<PACKAGE_DEPENDENCIES>)
+library(readr)
+library(dplyr)
+library(tsibble)
+
+# Load data
+sp500_data <- read_csv("/Users/gabrielmancillas/Desktop/ADS-506/Mod 01/Assignment 1.2/archive (12)/sp500_stocks.csv")
+
+# Show data
+head(sp500_data)
+```
+
+## Data Source
+
+Include public links to data if it is too large to upload (do not upload datasets larger than 50MB).
+
+## Importing the Data
+
+```{r}
+# import the data...
+
+# transform if necessary
+```
+
+## Time Series Plot
+
+```{r}
+#time series plot...
+```
+
+## Discussion
+
+...
