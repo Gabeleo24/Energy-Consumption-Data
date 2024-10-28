@@ -17,10 +17,13 @@ library(dplyr)
 library(tsibble)
 
 # Load data
-sp500_data <- read_csv("/Users/gabrielmancillas/Desktop/ADS-506/Mod 01/Assignment 1.2/data/sp500_stocks.csv")
+sp500_data <- read_csv("/Users/gabrielmancillas/Documents/GitHub/S-P-500/data/sp500_stocks_filtered.csv")
 
 # Show data
 head(sp500_data)
+#total number of rows and columns
+dim(sp500_data)
+
 ```
 
 ## Data Source
@@ -30,9 +33,7 @@ Include public links to data if it is too large to upload (do not upload dataset
 ## Importing the Data
 
 ```{r}
-# import the data...
 
-# transform if necessary
 ```
 
 ## Time Series Plot
