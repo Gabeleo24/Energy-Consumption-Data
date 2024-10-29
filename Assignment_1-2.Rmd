@@ -8,7 +8,7 @@ output: pdf_document
 **Assignment: Propose a Time Series Dataset for Your Final Project**
 ### Data Source
 
-The data source is the S&P 500 stock data from Kaggle however becasue the data exceed the 50MB compacity we will only include 2022 - 2024 dataset. The dataset contains the stock prices of the S&P 500 companies from 2013 to 2018. The dataset contains the following columns:
+The data source is the S&P 500 stock data from Kaggle however becasue the data exceed the 50MB compacity we will only include 2022 - 2024 dataset. The dataset contains the stock prices of the S&P 500 companies from 2010 to 2024. The dataset contains the following columns:
 
 ```{r warning=FALSE, message=FALSE}
 #library(<PACKAGE_DEPENDENCIES>)
