@@ -1,7 +1,8 @@
-# S-P-500
-The data source is the S&amp;P 500 stock data from Kaggle. The dataset contains the stock prices of the S&amp;P 500 companies from 2022 to 2024. The dataset contains the following columns:
+# Global Temperature Data
+**Data Overview**
+Berkeley Earth provides high-resolution land and ocean time series data and gridded temperature data. Our peer-reviewed methodology incorporates more temperature observations than other available products, and often has better coverage. Global datasets begin in 1850, with some land-only areas reported back to 1750. The newest generation of our products are augmented by machine learning techniques to improve the spatial resolution. This allows Berkeley Earth to provide the most comprehensive, high-resolution instrumental temperature data product available.
 
-Source [Kaggle](https://www.kaggle.com/datasets/andrewmvd/sp-500-stocks?select=sp500_stocks.csv)
-* The S&P 500 Index monitors the performance of 500 major companies traded on U.S. stock exchanges. By December 31, 2020, over $5.4 trillion in assets were linked to the index’s performance.
+Below we have made our data accessible at the global, national/regional, and local levels. Source and intermediate data is available as well. For technical questions or inquiries about the data, please contact data@berkeleyearth.org.
 
-Due to the inclusion of multiple stock classes for certain companies—such as Alphabet’s Class A (GOOGL) and Class C (GOOG)—the index actually represents 505 individual stocks.
+Source [BerkeleyEarth](https://berkeleyearth.org/data/)
+
