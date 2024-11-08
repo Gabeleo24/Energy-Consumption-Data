@@ -1,5 +1,5 @@
 ---
-title: "ADS506 Assignment 1.2 sp500_stocks"
+title: "ADS506 Assignment 1.2 PJME_MW Time Series Data"
 author: "Gabriel E. Mancillas Gallardo"
 date: "`r Sys.Date()`"
 output: pdf_document
