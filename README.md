@@ -7,10 +7,10 @@ This project involves analyzing and forecasting energy consumption data for Amer
 
 **Dataset**
 
-	•	File: AEP_hourly.csv
-	•	Columns:
-	•	Datetime: The timestamp of each hourly measurement (in the format YYYY-MM-DD HH:MM:SS).
-	•	AEP_MW: Power usage in megawatts (MW) for the corresponding hour.
+	• File: AEP_hourly.csv
+	• Columns:
+	• Datetime: The timestamp of each hourly measurement (in the format YYYY-MM-DD HH:MM:SS).
+	• AEP_MW: Power usage in megawatts (MW) for the corresponding hour.
 
 **Data Source**
 
@@ -18,10 +18,10 @@ The dataset was provided in the AEP_hourly.csv file, likely derived from histori
 
 **Project Goals**
 
-	1.	Explore and understand the characteristics of energy demand over time.
-	2.	Identify any seasonality or trends in hourly, daily, and monthly usage.
-	3.	Forecast future energy demand using advanced time series models.
-	4.	Evaluate the accuracy of different predictive models.
+	1.	Explore and understand the characteristics of energy demand over time
+	2.	Identify any seasonality or trends in hourly, daily, and monthly usage
+	3.	Forecast future energy demand using advanced time series models
+	4.	Evaluate the accuracy of different predictive models
 
 **Project Structure**
 
