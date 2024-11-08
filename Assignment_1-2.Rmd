@@ -11,18 +11,19 @@ output: pdf_document
 The data source is the S&P 500 stock data from Kaggle however becasue the data exceed the 50MB compacity we will only include 2022 - 2024 dataset. The dataset contains the stock prices of the S&P 500 companies from 2010 to 2024. The dataset contains the following columns:
 
 ```{r warning=FALSE, message=FALSE}
-#library(<PACKAGE_DEPENDENCIES>)
+# Load necessary libraries
 library(readr)
 library(dplyr)
 library(tsibble)
 
-# Load data
-sp500_data <- read_csv("/Users/gabrielmancillas/Documents/GitHub/S-P-500/data/sp500_stocks_filtered.csv")
+# Load AEP consumption data
+aep_data <- read_csv("/Users/gabrielmancillas/Documents/GitHub/S-P-500/AEP_hourly.csv")
 
-# Show data
-head(sp500_data)
-#total number of rows and columns
-dim(sp500_data)
+# Display the first few rows of the dataset
+head(aep_data)
+
+# Display the total number of rows and columns
+dim(aep_data)
 
 ```
 
@@ -34,13 +35,13 @@ Include public links to data if it is too large to upload (do not upload dataset
 
 ```{r}
 # Check for duplicates
-duplicates <- sp500_data %>%
-    group_by(Date) %>%
+duplicates <- aep_data %>%
+    group_by(Datetime) %>%
     filter(n() > 1)
 
 # Remove duplicates if any
-sp500_data <- sp500_data %>%
-    distinct(Date, .keep_all = TRUE)
+aep_data <- aep_data %>%
+    distinct(Datetime, .keep_all = TRUE)
 
 ```
 
@@ -50,16 +51,16 @@ library(tsibble)
 library(ggplot2)
 
 # Convert to tsibble for time series structure
-sp500_data_ts <- sp500_data %>%
-    as_tsibble(index = Date)
+aep_data_ts <- aep_data %>%
+    as_tsibble(index = Datetime)
 
 # Time series plot for Adjusted Close prices
-ggplot(sp500_data_ts, aes(x = Date, y = `Adj Close`)) +
+ggplot(aep_data_ts, aes(x = Datetime, y = `AEP_MW`)) +
     geom_line(color = "blue") +
     labs(
-        title = "S&P 500 Adjusted Close Prices (2022-2024)",
+        title = "Hourly power consumption data from PJM",
         x = "Date",
-        y = "Adjusted Close Price (USD)"
+        y = "Frequencey"
     ) +
     theme_minimal() +
     theme(
@@ -70,8 +71,8 @@ ggplot(sp500_data_ts, aes(x = Date, y = `Adj Close`)) +
 
 ## Discussion
 
-The S&P 500's Adjusted Close Prices experienced notable changes from 2022 to 2024, with a prominent decrease in early 2022, a recovery throughout 2023, and a further increase into 2024. This trend probably indicates larger economic issues in 2022, like worries about inflation and slowdowns, followed by a possible bounce back influenced by better investor confidence and stabilization-focused economic strategies.
+The hourly power consumption data from PJM reveals notable fluctuations over time, capturing trends that reflect varying levels of energy demand influenced by seasonality, time of day, and economic factors. From 2005 onwards, we observe a periodic increase in energy demand during summer and winter months, likely driven by seasonal heating and cooling needs. These patterns highlight the strong influence of temperature and weather conditions on energy usage.
 
-Market volatility is highlighted by data showing significant drops and rebounds, revealing a market that is greatly influenced by global events. This time frame highlights key patterns in investor actions, demonstrating caution when the market is down and regained trust as it bounces back.
+Energy demand also reflects broader economic activities. Periods of economic growth are often marked by increased industrial and residential energy consumption, whereas economic downturns can lead to reduced demand. This dataset offers insights into how external factors, such as economic slowdowns, regulatory changes, and shifts in energy efficiency practices, can directly impact consumption patterns.
 
-Predicting outcomes using this set of data could be extremely beneficial for investors and financial analysts who want to predict future trends and modify their investment strategies accordingly. Yet, the stock market's innate unpredictability, particularly in a tumultuous period such as 2022-2024, presents obstacles to precise prediction. Adding more economic indicators and market factors would probably improve the accuracy of predictions and offer stronger insights for planning strategic investments.
+Predicting future consumption trends from this dataset can provide valuable insights for energy providers, policymakers, and businesses. Accurate forecasts help ensure resource availability, support grid stability, and inform pricing strategies. However, energy demand is inherently variable, affected by unpredictable factors like extreme weather events and changes in consumer behavior. Adding contextual data, such as temperature records or economic indicators, would likely improve forecast accuracy and provide a more comprehensive understanding of the factors driving energy consumption.
