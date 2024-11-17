@@ -5,20 +5,22 @@ date: "`r Sys.Date()`"
 output: pdf_document
 ---
 
-
 **Assignment: Propose a Time Series Dataset for Your Final Project**
 ### Data Source
 
-The data source is the S&P 500 stock data from Kaggle however becasue the data exceed the 50MB compacity we will only include 2022 - 2024 dataset. The dataset contains the stock prices of the S&P 500 companies from 2010 to 2024. The dataset contains the following columns:
+The data source is the PJM Hourly Energy Consumption Data. The dataset contains the hourly power consumption data from PJM from 2005 to 2018. The dataset contains the following columns:
 
 ```{r warning=FALSE, message=FALSE}
 # Load necessary libraries
 library(readr)
 library(dplyr)
 library(tsibble)
+library(ggplot2)
+library(feasts)
+library(fable)
 
 # Load AEP consumption data
-aep_data <- read_csv("/Users/gabrielmancillas/Documents/GitHub/S-P-500/AEP_hourly.csv")
+aep_data <- read_csv("/Users/home/Documents/GitHub/Energy-Consumption-Data/AEP_hourly.csv")
 
 # Display the first few rows of the dataset
 head(aep_data)
@@ -30,7 +32,7 @@ dim(aep_data)
 
 ## Data Source
 
-Include public links to data if it is too large to upload (do not upload datasets larger than 50MB). **There is no need to upload the data (its under 40MB)** [github repository[(https://github.com/Gabeleo24/S-P-500/tree/main/data)
+Include public links to data if it is too large to upload (do not upload datasets larger than 50MB). **There is no need to upload the data (its under 40MB)** [github repository](https://github.com/Gabeleo24/S-P-500/tree/main/data)
 
 ## Time Series Plot
 
@@ -47,9 +49,6 @@ aep_data <- aep_data %>%
 ```
 
 ```{r}
-# Plot the time series
-library(tsibble)
-library(ggplot2)
 
 # Convert to tsibble for time series structure
 aep_data_ts <- aep_data %>%
@@ -61,7 +60,7 @@ ggplot(aep_data_ts, aes(x = Datetime, y = `AEP_MW`)) +
     labs(
         title = "Hourly power consumption data from PJM",
         x = "Date",
-        y = "Frequencey"
+        y = "Frequency"
     ) +
     theme_minimal() +
     theme(
@@ -77,3 +76,135 @@ The hourly power consumption data from PJM reveals notable fluctuations over tim
 Energy demand also reflects broader economic activities. Periods of economic growth are often marked by increased industrial and residential energy consumption, whereas economic downturns can lead to reduced demand. This dataset offers insights into how external factors, such as economic slowdowns, regulatory changes, and shifts in energy efficiency practices, can directly impact consumption patterns.
 
 Predicting future consumption trends from this dataset can provide valuable insights for energy providers, policymakers, and businesses. Accurate forecasts help ensure resource availability, support grid stability, and inform pricing strategies. However, energy demand is inherently variable, affected by unpredictable factors like extreme weather events and changes in consumer behavior. Adding contextual data, such as temperature records or economic indicators, would likely improve forecast accuracy and provide a more comprehensive understanding of the factors driving energy consumption.
+
+___
+
+\newpage 
+
+**Assignment: Propose a Time Series Dataset for Your Final Project**
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+print(summary(aep_data))
+
+# Check for missing values/duplicates
+duplicates <- aep_data %>%
+    group_by(Datetime) %>%
+    filter(n() > 1)
+
+if (nrow(duplicates) == 0) {
+    aep_data <- aep_data %>%
+        distinct(Datetime, .keep_all = TRUE)
+}
+
+# check 
+missing_values <- sum(is.na(aep_data))
+if (missing_values > 0) {
+    print(paste("Missing values in the dataset: ", missing_values))
+
+    aep_data <- na.omit(aep_data)
+}
+
+print(head(aep_data))
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Check for missing values
+missing_count <- sum(is.na(aep_data))
+cat("Number of missing values:", missing_count, "\n")
+
+# Check for missing timestamps
+library(lubridate)
+expected_range <- seq(min(aep_data$Datetime), max(aep_data$Datetime), by = "hour")
+missing_timestamps <- setdiff(expected_range, aep_data$Datetime)
+cat("Number of missing timestamps:", length(missing_timestamps), "\n")
+
+#SHOW ME THE MISSING TIMESTAMP
+if (length(missing_timestamps) > 0) {
+  # Print the first few missing timestamps
+  print(head(missing_timestamps))
+}
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Linear interpolation to fill missing values
+library(zoo)
+
+aep_data$AEP_MW <- na.approx(aep_data$AEP_MW, na.rm = FALSE)
+
+# Verify if all missing values are filled
+cat("Number of missing values after interpolation:", sum(is.na(aep_data$AEP_MW)), "\n")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(ggplot2)
+
+# Plot the time series
+ggplot(aep_data, aes(x = Datetime, y = AEP_MW)) +
+  geom_line(color = "blue") +
+  labs(
+    title = "Hourly Power Consumption (AEP)",
+    x = "Datetime",
+    y = "Power Consumption (MW)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Check for missing values in AEP_MW
+cat("Number of missing values in AEP_MW:", sum(is.na(aep_data$AEP_MW)), "\n")
+
+# Check for irregularities in the datetime sequence
+library(lubridate)
+expected_range <- seq(min(aep_data$Datetime), max(aep_data$Datetime), by = "hour")
+missing_timestamps <- setdiff(expected_range, aep_data$Datetime)
+cat("Number of missing timestamps:", length(missing_timestamps), "\n")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Ensure proper tsibble structure
+library(tsibble)
+
+aep_data_ts <- aep_data %>%
+  as_tsibble(index = Datetime)
+
+# Check structure
+print(aep_data_ts)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+class(aep_data$AEP_MW)
+summary(aep_data$AEP_MW)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Convert data to a ts object
+library(stats)
+ts_data <- ts(aep_data$AEP_MW, start = c(2004, 10), frequency = 24 * 365.25)
+
+# Decompose using additive model
+decomp <- decompose(ts_data, type = "additive")
+
+# Plot the decomposition
+plot(decomp)
+```
+
+___
+
+\newpage
+
+#### **Lets proceed with the ARIMA of the time series data**
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Fit ARIMA model
+install.packages(repos = "https://cran.r-project.org", "forecast")
+install.packages(repos = "https://cran.r-project.org", "tseries")
+
+library(forecast)
+library(tseries)
+```
