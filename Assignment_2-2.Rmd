@@ -207,17 +207,29 @@ library(tseries)
 ```
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+library(dplyr)
+aep_data_daily <- aep_data %>%
+  mutate(Date = as.Date(Datetime)) %>%
+  group_by(Date) %>%
+  summarise(AEP_MW = mean(AEP_MW, na.rm = TRUE))
+
 #SPLIT THE DATA
 split_point <- as.integer(0.8 * nrow(aep_data))
 
-train_data <- ts(aep_data$AEP_MW[1:split_point], start = c(2004, 10), frequency = 24 * 365.25)
-test_data <- ts(aep_data$AEP_MW[(split_point + 1):nrow(aep_data)], start = c(2004, 10), frequency = 24 * 365.25)
+train_data <- ts(aep_data_daily$AEP_MW[1:split_point], start = c(2004, 10), frequency = 365.25)
+test_data <- ts(aep_data_daily$AEP_MW[(split_point + 1):nrow(aep_data_daily)], start = c(2004, 10), frequency = 365.25)
 
 cat("Training data size:", length(train_data), "\nTesting size:", length(test_data), "\n")
 ```
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
+```{r, cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
 # Check for stationarity
+library(future)
+
+# Fit ARIMA with parallelism and restricted parameters
+plan(multisession)
+arima_model <- auto.arima(train_data, max.p = 5, max.q = 5, max.d = 1, parallel = TRUE, stepwise = TRUE)
 
 # Check for stationarity
 adf_test <- adf.test(aep_data$AEP_MW, alternative = "stationary")
@@ -239,7 +251,7 @@ cat("ADF Test p-value after differencing:", adf_test_diff$p.value, "\n")
 cat("KPSS Test p-value after differencing:", kpss_test_diff$p.value, "\n")
 ```
 
-```{r, cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+```{r,cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
 system.time({
     #fit ARIMA model
 arima_model <- auto.arima(train_data)

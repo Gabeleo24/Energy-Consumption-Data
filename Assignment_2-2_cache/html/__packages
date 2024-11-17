@@ -1,0 +1,12 @@
+readr
+dplyr
+tsibble
+ggplot2
+fabletools
+feasts
+fable
+lubridate
+zoo
+forecast
+tseries
+future
