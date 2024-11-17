@@ -18,6 +18,7 @@ library(tsibble)
 library(ggplot2)
 library(feasts)
 library(fable)
+library(forecast)
 
 # Load AEP consumption data
 aep_data <- read_csv("/Users/home/Documents/GitHub/Energy-Consumption-Data/AEP_hourly.csv")
@@ -207,71 +208,257 @@ library(tseries)
 ```
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-
+# Load libraries
 library(dplyr)
+library(tsibble)
+library(ggplot2)
+library(forecast)
+
+# Load the data
+aep_data <- read_csv("/Users/home/Documents/GitHub/Energy-Consumption-Data/AEP_hourly.csv")
+
+# Preview the dataset
+head(aep_data)
+dim(aep_data)
+
+# Remove duplicates
+aep_data <- aep_data %>%
+  distinct(Datetime, .keep_all = TRUE)
+
+# Handle missing values
+aep_data$AEP_MW <- zoo::na.approx(aep_data$AEP_MW, na.rm = FALSE)
+
+# Convert to daily averages
 aep_data_daily <- aep_data %>%
   mutate(Date = as.Date(Datetime)) %>%
   group_by(Date) %>%
   summarise(AEP_MW = mean(AEP_MW, na.rm = TRUE))
 
-#SPLIT THE DATA
-split_point <- as.integer(0.8 * nrow(aep_data))
+# Convert to a time series object
+full_data_ts <- ts(aep_data_daily$AEP_MW, start = c(2004, 10), frequency = 365.25)
 
-train_data <- ts(aep_data_daily$AEP_MW[1:split_point], start = c(2004, 10), frequency = 365.25)
-test_data <- ts(aep_data_daily$AEP_MW[(split_point + 1):nrow(aep_data_daily)], start = c(2004, 10), frequency = 365.25)
-
-cat("Training data size:", length(train_data), "\nTesting size:", length(test_data), "\n")
+# Plot the full time series
+ggplot(aep_data_daily, aes(x = Date, y = AEP_MW)) +
+  geom_line(color = "blue") +
+  labs(
+    title = "Full Time Series: Hourly Power Consumption (AEP)",
+    x = "Date",
+    y = "Power Consumption (MW)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
 ```
 
-```{r, cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
-# Check for stationarity
-library(future)
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Time Series Plot
+ggplot(aep_data_daily, aes(x = Date, y = AEP_MW)) +
+  geom_line(color = "blue") +
+  labs(
+    title = "Daily Average Power Consumption (AEP)",
+    x = "Date",
+    y = "Power Consumption (MW)"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+```{r}
+# Convert to time series object
+aep_ts <- ts(aep_data_daily$AEP_MW, start = c(2005, 1), frequency = 365.25)
 
-# Fit ARIMA with parallelism and restricted parameters
-plan(multisession)
-arima_model <- auto.arima(train_data, max.p = 5, max.q = 5, max.d = 1, parallel = TRUE, stepwise = TRUE)
+# Split data into training (85%) and testing (15%) sets
+split_point <- floor(0.85 * length(aep_ts))
+train_data <- window(aep_ts, end = c(2005 + (split_point / 365.25)))
+test_data <- window(aep_ts, start = c(2005 + (split_point / 365.25) + 1 / 365.25))
 
-# Check for stationarity
-adf_test <- adf.test(aep_data$AEP_MW, alternative = "stationary")
-kpss_test <- kpss.test(aep_data$AEP_MW, null = "Trend")
+# Fit ARMA model
+arma_model <- auto.arima(train_data, seasonal = FALSE)
 
-# Print test results
-cat("ADF Test p-value:", adf_test$p.value, "\n")
-cat("KPSS Test p-value:", kpss_test$p.value, "\n")
-
-# Differencing
-diff_aep_data <- diff(aep_data$AEP_MW)
-
-# Check for stationarity after differencing
-adf_test_diff <- adf.test(diff_aep_data, alternative = "stationary")
-kpss_test_diff <- kpss.test(diff_aep_data, null = "Trend")
-
-# Print test results after differencing
-cat("ADF Test p-value after differencing:", adf_test_diff$p.value, "\n")
-cat("KPSS Test p-value after differencing:", kpss_test_diff$p.value, "\n")
+# Display ARMA model summary
+summary(arma_model)
 ```
 
-```{r,cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
-system.time({
-    #fit ARIMA model
-arima_model <- auto.arima(train_data)
+\newpage
 
-#display the model
-summary(arima_model)
-
-# Forecast
-forecast_values <- forecast(arima_model, h = length(test_data))
+```{r}
+# Forecast future values
+arma_forecast <- forecast(arma_model, h = length(test_data))
 
 # Plot the forecast
-autoplot(forecast_values) +
-  labs(title = "ARIMA Forecast of AEP Power Consumption",
-       x = "Time",
-       y = "Power Consumption (MW)")
+autoplot(arma_forecast) +
+  autolayer(test_data, series = "Actual", PI = FALSE) +
+  labs(
+    title = "ARMA Forecast vs Actual Data",
+    x = "Time",
+    y = "Power Consumption (MW)"
+  ) +
+  theme_minimal()
+```
 
-# Compute RMSE and MAE
-rmse <- sqrt(mean((test_data - forecast_values$mean)^2, na.rm = TRUE))
-mae <- mean(abs(test_data - forecast_values$mean), na.rm = TRUE)
+```{r}
+# Calculate RMSE and MAE
+arma_rmse <- sqrt(mean((test_data - arma_forecast$mean)^2, na.rm = TRUE))
+arma_mae <- mean(abs(test_data - arma_forecast$mean), na.rm = TRUE)
 
-cat("RMSE:", rmse, "\nMAE:", mae, "\n")
-})
+# Print model evaluation metrics
+cat("ARMA - RMSE:", arma_rmse, "\n")
+cat("ARMA - MAE:", arma_mae, "\n")
+```
+
+```{r}
+# Check residuals
+checkresiduals(arma_model)
+``` 
+
+
+```{r}
+# Random Walk Model
+rw_forecast <- rwf(train_data, h = length(test_data), drift = FALSE)
+
+# Calculate Random Walk metrics
+rw_rmse <- sqrt(mean((test_data - rw_forecast$mean)^2, na.rm = TRUE))
+rw_mae <- mean(abs(test_data - rw_forecast$mean), na.rm = TRUE)
+
+# Print results
+cat("Random Walk - RMSE:", rw_rmse, "\n")
+cat("Random Walk - MAE:", rw_mae, "\n")
+
+# Model Performance Comparison
+model_comparison <- data.frame(
+  Model = c("ARMA", "Random Walk"),
+  RMSE = c(arma_rmse, rw_rmse),
+  MAE = c(arma_mae, rw_mae)
+)
+
+# Display comparison
+print(model_comparison)
+
+# Plot comparison
+ggplot(model_comparison, aes(x = Model)) +
+  geom_bar(aes(y = RMSE), stat = "identity", fill = "blue", alpha = 0.7) +
+  geom_bar(aes(y = MAE), stat = "identity", fill = "red", alpha = 0.7, position = "dodge") +
+  labs(
+    title = "Model Performance Comparison",
+    x = "Model",
+    y = "Error Metric"
+  ) +
+  theme_minimal()
+```
+
+---
+
+\newpage
+
+```{r}
+# Load necessary libraries
+library(readr)
+library(dplyr)
+library(tsibble)
+library(ggplot2)
+library(forecast)
+
+# Load AEP consumption data
+aep_data <- read_csv("/Users/home/Documents/GitHub/Energy-Consumption-Data/AEP_hourly.csv")
+
+# Display the first few rows of the dataset
+head(aep_data)
+
+# Display the total number of rows and columns
+dim(aep_data)
+```
+
+```{r}
+# Remove duplicates
+aep_data <- aep_data %>%
+  distinct(Datetime, .keep_all = TRUE)
+
+# Handle missing values
+aep_data$AEP_MW <- zoo::na.approx(aep_data$AEP_MW, na.rm = FALSE)
+
+# Convert to daily averages
+aep_data_daily <- aep_data %>%
+  mutate(Date = as.Date(Datetime)) %>%
+  group_by(Date) %>%
+  summarise(AEP_MW = mean(AEP_MW, na.rm = TRUE))
+
+# Convert to a time series object
+aep_ts <- ts(aep_data_daily$AEP_MW, start = c(2005, 1), frequency = 365.25)
+```
+
+```{r}
+# Split data into training (85%) and testing (15%) sets
+split_point <- floor(0.85 * length(aep_ts))
+train_data <- window(aep_ts, end = c(2005 + (split_point / 365.25)))
+test_data <- window(aep_ts, start = c(2005 + (split_point / 365.25) + 1 / 365.25))
+
+# Fit ARIMA model using auto.arima
+arima_model <- auto.arima(train_data, seasonal = FALSE)
+
+# Display ARIMA model summary
+summary(arima_model)
+```
+
+```{r}
+# Forecast future values
+arima_forecast <- forecast(arima_model, h = length(test_data))
+
+# Plot the forecast
+autoplot(arima_forecast) +
+  autolayer(test_data, series = "Actual", PI = FALSE) +
+  labs(
+    title = "ARIMA Forecast vs Actual Data",
+    x = "Time",
+    y = "Power Consumption (MW)"
+  ) +
+  theme_minimal()
+
+# Calculate RMSE and MAE for ARIMA
+arima_rmse <- sqrt(mean((test_data - arima_forecast$mean)^2, na.rm = TRUE))
+arima_mae <- mean(abs(test_data - arima_forecast$mean), na.rm = TRUE)
+
+# Print evaluation metrics
+cat("ARIMA - RMSE:", arima_rmse, "\n")
+cat("ARIMA - MAE:", arima_mae, "\n")
+```
+
+```{r}  
+# Check residuals
+checkresiduals(arima_model)
+```
+
+```{r}
+# Random Walk Model
+rw_forecast <- rwf(train_data, h = length(test_data), drift = FALSE)
+
+# Calculate Random Walk metrics
+rw_rmse <- sqrt(mean((test_data - rw_forecast$mean)^2, na.rm = TRUE))
+rw_mae <- mean(abs(test_data - rw_forecast$mean), na.rm = TRUE)
+
+# Print results
+cat("Random Walk - RMSE:", rw_rmse, "\n")
+cat("Random Walk - MAE:", rw_mae, "\n")
+
+# Model Performance Comparison
+model_comparison <- data.frame(
+  Model = c("ARIMA", "Random Walk"),
+  RMSE = c(arima_rmse, rw_rmse),
+  MAE = c(arima_mae, rw_mae)
+)
+
+# Display comparison
+print(model_comparison)
+
+# Plot comparison
+ggplot(model_comparison, aes(x = Model)) +
+  geom_bar(aes(y = RMSE), stat = "identity", fill = "blue", alpha = 0.7) +
+  geom_bar(aes(y = MAE), stat = "identity", fill = "red", alpha = 0.7, position = "dodge") +
+  labs(
+    title = "Model Performance Comparison",
+    x = "Model",
+    y = "Error Metric"
+  ) +
+  theme_minimal()
+
 ```
