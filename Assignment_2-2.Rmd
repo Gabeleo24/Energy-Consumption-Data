@@ -202,9 +202,64 @@ ___
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # Fit ARIMA model
-install.packages(repos = "https://cran.r-project.org", "forecast")
-install.packages(repos = "https://cran.r-project.org", "tseries")
-
 library(forecast)
 library(tseries)
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#SPLIT THE DATA
+split_point <- as.integer(0.8 * nrow(aep_data))
+
+train_data <- ts(aep_data$AEP_MW[1:split_point], start = c(2004, 10), frequency = 24 * 365.25)
+test_data <- ts(aep_data$AEP_MW[(split_point + 1):nrow(aep_data)], start = c(2004, 10), frequency = 24 * 365.25)
+
+cat("Training data size:", length(train_data), "\nTesting size:", length(test_data), "\n")
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Check for stationarity
+
+# Check for stationarity
+adf_test <- adf.test(aep_data$AEP_MW, alternative = "stationary")
+kpss_test <- kpss.test(aep_data$AEP_MW, null = "Trend")
+
+# Print test results
+cat("ADF Test p-value:", adf_test$p.value, "\n")
+cat("KPSS Test p-value:", kpss_test$p.value, "\n")
+
+# Differencing
+diff_aep_data <- diff(aep_data$AEP_MW)
+
+# Check for stationarity after differencing
+adf_test_diff <- adf.test(diff_aep_data, alternative = "stationary")
+kpss_test_diff <- kpss.test(diff_aep_data, null = "Trend")
+
+# Print test results after differencing
+cat("ADF Test p-value after differencing:", adf_test_diff$p.value, "\n")
+cat("KPSS Test p-value after differencing:", kpss_test_diff$p.value, "\n")
+```
+
+```{r, cache=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
+system.time({
+    #fit ARIMA model
+arima_model <- auto.arima(train_data)
+
+#display the model
+summary(arima_model)
+
+# Forecast
+forecast_values <- forecast(arima_model, h = length(test_data))
+
+# Plot the forecast
+autoplot(forecast_values) +
+  labs(title = "ARIMA Forecast of AEP Power Consumption",
+       x = "Time",
+       y = "Power Consumption (MW)")
+
+# Compute RMSE and MAE
+rmse <- sqrt(mean((test_data - forecast_values$mean)^2, na.rm = TRUE))
+mae <- mean(abs(test_data - forecast_values$mean), na.rm = TRUE)
+
+cat("RMSE:", rmse, "\nMAE:", mae, "\n")
+})
 ```
