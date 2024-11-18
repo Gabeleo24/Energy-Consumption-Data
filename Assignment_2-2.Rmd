@@ -209,10 +209,12 @@ library(tseries)
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # Load libraries
+library(readr)
 library(dplyr)
 library(tsibble)
 library(ggplot2)
 library(forecast)
+library(zoo)
 
 # Load the data
 aep_data <- read_csv("/Users/home/Documents/GitHub/Energy-Consumption-Data/AEP_hourly.csv")
@@ -224,6 +226,11 @@ dim(aep_data)
 # Remove duplicates
 aep_data <- aep_data %>%
   distinct(Datetime, .keep_all = TRUE)
+ 
+# Missing Value Handling
+# Linear interpolation is used as it provides a balanced approach to filling missing data by estimating
+# values based on surrounding data points. Alternatives like forward fill/backward fill were avoided
+# as they could introduce bias in trends and seasonality.
 
 # Handle missing values
 aep_data$AEP_MW <- zoo::na.approx(aep_data$AEP_MW, na.rm = FALSE)
@@ -268,165 +275,88 @@ ggplot(aep_data_daily, aes(x = Date, y = AEP_MW)) +
 # Convert to time series object
 aep_ts <- ts(aep_data_daily$AEP_MW, start = c(2005, 1), frequency = 365.25)
 
+# Fit ARIMA model using auto.arima()
 # Split data into training (85%) and testing (15%) sets
+# Note: Seasonal component is set to FALSE as this analysis does not focus on seasonal patterns
 split_point <- floor(0.85 * length(aep_ts))
 train_data <- window(aep_ts, end = c(2005 + (split_point / 365.25)))
 test_data <- window(aep_ts, start = c(2005 + (split_point / 365.25) + 1 / 365.25))
 
-# Fit ARMA model
-arma_model <- auto.arima(train_data, seasonal = FALSE)
-
-# Display ARMA model summary
-summary(arma_model)
-```
-
-\newpage
-
-```{r}
-# Forecast future values
-arma_forecast <- forecast(arma_model, h = length(test_data))
-
-# Plot the forecast
-autoplot(arma_forecast) +
-  autolayer(test_data, series = "Actual", PI = FALSE) +
-  labs(
-    title = "ARMA Forecast vs Actual Data",
-    x = "Time",
-    y = "Power Consumption (MW)"
-  ) +
-  theme_minimal()
-```
-
-```{r}
-# Calculate RMSE and MAE
-arma_rmse <- sqrt(mean((test_data - arma_forecast$mean)^2, na.rm = TRUE))
-arma_mae <- mean(abs(test_data - arma_forecast$mean), na.rm = TRUE)
-
-# Print model evaluation metrics
-cat("ARMA - RMSE:", arma_rmse, "\n")
-cat("ARMA - MAE:", arma_mae, "\n")
-```
-
-```{r}
-# Check residuals
-checkresiduals(arma_model)
-``` 
-
-
-```{r}
-# Random Walk Model
-rw_forecast <- rwf(train_data, h = length(test_data), drift = FALSE)
-
-# Calculate Random Walk metrics
-rw_rmse <- sqrt(mean((test_data - rw_forecast$mean)^2, na.rm = TRUE))
-rw_mae <- mean(abs(test_data - rw_forecast$mean), na.rm = TRUE)
-
-# Print results
-cat("Random Walk - RMSE:", rw_rmse, "\n")
-cat("Random Walk - MAE:", rw_mae, "\n")
-
-# Model Performance Comparison
-model_comparison <- data.frame(
-  Model = c("ARMA", "Random Walk"),
-  RMSE = c(arma_rmse, rw_rmse),
-  MAE = c(arma_mae, rw_mae)
-)
-
-# Display comparison
-print(model_comparison)
-
-# Plot comparison
-ggplot(model_comparison, aes(x = Model)) +
-  geom_bar(aes(y = RMSE), stat = "identity", fill = "blue", alpha = 0.7) +
-  geom_bar(aes(y = MAE), stat = "identity", fill = "red", alpha = 0.7, position = "dodge") +
-  labs(
-    title = "Model Performance Comparison",
-    x = "Model",
-    y = "Error Metric"
-  ) +
-  theme_minimal()
-```
-
----
-
-\newpage
-
-```{r}
-# Load necessary libraries
-library(readr)
-library(dplyr)
-library(tsibble)
-library(ggplot2)
-library(forecast)
-
-# Load AEP consumption data
-aep_data <- read_csv("/Users/home/Documents/GitHub/Energy-Consumption-Data/AEP_hourly.csv")
-
-# Display the first few rows of the dataset
-head(aep_data)
-
-# Display the total number of rows and columns
-dim(aep_data)
-```
-
-```{r}
-# Remove duplicates
-aep_data <- aep_data %>%
-  distinct(Datetime, .keep_all = TRUE)
-
-# Handle missing values
-aep_data$AEP_MW <- zoo::na.approx(aep_data$AEP_MW, na.rm = FALSE)
-
-# Convert to daily averages
-aep_data_daily <- aep_data %>%
-  mutate(Date = as.Date(Datetime)) %>%
-  group_by(Date) %>%
-  summarise(AEP_MW = mean(AEP_MW, na.rm = TRUE))
-
-# Convert to a time series object
-aep_ts <- ts(aep_data_daily$AEP_MW, start = c(2005, 1), frequency = 365.25)
-```
-
-```{r}
-# Split data into training (85%) and testing (15%) sets
-split_point <- floor(0.85 * length(aep_ts))
-train_data <- window(aep_ts, end = c(2005 + (split_point / 365.25)))
-test_data <- window(aep_ts, start = c(2005 + (split_point / 365.25) + 1 / 365.25))
-
-# Fit ARIMA model using auto.arima
+# Forecast future values using ARIMA
 arima_model <- auto.arima(train_data, seasonal = FALSE)
 
-# Display ARIMA model summary
+
+# Display ARMA model summary
 summary(arima_model)
 ```
+
+\newpage
 
 ```{r}
 # Forecast future values
 arima_forecast <- forecast(arima_model, h = length(test_data))
 
-# Plot the forecast
+# Plot the ARIMA forecast with confidence intervals
 autoplot(arima_forecast) +
-  autolayer(test_data, series = "Actual", PI = FALSE) +
+  autolayer(test_data, series = "Actual", PI = TRUE) +
   labs(
-    title = "ARIMA Forecast vs Actual Data",
+    title = "ARIMA Forecast with Confidence Intervals",
     x = "Time",
     y = "Power Consumption (MW)"
   ) +
   theme_minimal()
 
+# Print the first few rows of the forecast
+print(head(arima_forecast))
+```
+
+```{r}
 # Calculate RMSE and MAE for ARIMA
+# RMSE: Root Mean Squared Error (sensitive to large errors)
 arima_rmse <- sqrt(mean((test_data - arima_forecast$mean)^2, na.rm = TRUE))
+
+# MAE: Mean Absolute Error (average magnitude of errors)
 arima_mae <- mean(abs(test_data - arima_forecast$mean), na.rm = TRUE)
 
-# Print evaluation metrics
+# MAPE: Mean Absolute Percentage Error (relative error in %)
+arima_mape <- mean(abs((test_data - arima_forecast$mean) / test_data), na.rm = TRUE) * 100
+
+# SMAPE: Symmetric Mean Absolute Percentage Error (scale-independent relative error)
+arima_smape <- mean(2 * abs(test_data - arima_forecast$mean) / 
+                      (abs(test_data) + abs(arima_forecast$mean)), na.rm = TRUE) * 100
+  
+# Print results
+cat("ARIMA - MAPE:", arima_mape, "%\n")
+cat("ARIMA - SMAPE:", arima_smape, "%\n")
 cat("ARIMA - RMSE:", arima_rmse, "\n")
 cat("ARIMA - MAE:", arima_mae, "\n")
+
 ```
 
-```{r}  
+### Evaluation Metrics Interpretation
+
+- **Root Mean Squared Error (RMSE)**: Measures the square root of the average squared errors. It penalizes large errors more heavily and is sensitive to outliers.
+- **Mean Absolute Error (MAE)**: Calculates the average magnitude of forecast errors. It provides a straightforward view of how far predictions are from actual values.
+- **Mean Absolute Percentage Error (MAPE)**: Indicates the average percentage error relative to actual values. Useful for understanding error magnitude in relative terms.
+- **Symmetric Mean Absolute Percentage Error (SMAPE)**: Similar to MAPE but accounts for scale differences between the actual and predicted values, providing a more balanced perspective.
+
+Lower values for these metrics indicate better forecasting performance. In this case, the ARIMA model's RMSE, MAE, MAPE, and SMAPE values provide insights into the model's accuracy and error characteristics. The results can guide further model refinement and help assess the model's suitability for forecasting power consumption trends.
+
+```{r}
 # Check residuals
 checkresiduals(arima_model)
-```
+``` 
+
+
+### Residual Diagnostics
+
+Residual diagnostics help assess whether the ARIMA model sufficiently captures the structure of the data. Key observations include:
+
+- **ACF and PACF Plots**: Residual autocorrelation should be minimal.
+- **Ljung-Box Test**: Tests whether residuals are white noise. A p-value > 0.05 indicates that residuals are independent and random.
+
+If residuals exhibit patterns, the model may need adjustment, such as adding differencing or changing AR/MA terms.
+
 
 ```{r}
 # Random Walk Model
@@ -435,30 +365,37 @@ rw_forecast <- rwf(train_data, h = length(test_data), drift = FALSE)
 # Calculate Random Walk metrics
 rw_rmse <- sqrt(mean((test_data - rw_forecast$mean)^2, na.rm = TRUE))
 rw_mae <- mean(abs(test_data - rw_forecast$mean), na.rm = TRUE)
+rw_mape <- NA  # Random Walk may not have MAPE
+rw_smape <- NA # Random Walk may not have SMAPE
 
 # Print results
 cat("Random Walk - RMSE:", rw_rmse, "\n")
 cat("Random Walk - MAE:", rw_mae, "\n")
 
-# Model Performance Comparison
 model_comparison <- data.frame(
   Model = c("ARIMA", "Random Walk"),
   RMSE = c(arima_rmse, rw_rmse),
-  MAE = c(arima_mae, rw_mae)
+  MAE = c(arima_mae, rw_mae),
+  MAPE = c(arima_mape, NA),  # Random Walk may not have MAPE
+  SMAPE = c(arima_smape, NA) # Random Walk may not have SMAPE
 )
-
-# Display comparison
 print(model_comparison)
+```
 
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # Plot comparison
-ggplot(model_comparison, aes(x = Model)) +
-  geom_bar(aes(y = RMSE), stat = "identity", fill = "blue", alpha = 0.7) +
-  geom_bar(aes(y = MAE), stat = "identity", fill = "red", alpha = 0.7, position = "dodge") +
+
+library(reshape2)
+model_comparison_long <- melt(model_comparison, id.vars = "Model")
+
+ggplot(model_comparison_long, aes(x = Model, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "dodge") +
   labs(
-    title = "Model Performance Comparison",
+    title = "Model Performance Metrics Comparison",
     x = "Model",
-    y = "Error Metric"
+    y = "Metric Value",
+    fill = "Metric"
   ) +
   theme_minimal()
-
 ```
+
